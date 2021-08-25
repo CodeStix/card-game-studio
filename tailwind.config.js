@@ -240,6 +240,7 @@ module.exports = {
         },
         fontFamily: {
             sans: [
+                "Source Sans Pro",
                 "ui-sans-serif",
                 "system-ui",
                 "-apple-system",

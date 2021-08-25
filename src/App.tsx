@@ -19,6 +19,8 @@ interface Card {
     imageY?: number;
     value: string;
     valueDescription: string;
+    text: string;
+    description: string;
 }
 
 function imageFileToDataUrl(image: ImageFile) {
@@ -228,7 +230,13 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
         gl.fillStyle = topGradient;
         gl.fillRect(0, 0, w, h);
 
-        gl.strokeStyle = "white";
+        const BORDER_COLOR = "white";
+        const BORDER_TEXT_COLOR = "#555555";
+        const BORDER_TEXT_SMALL_COLOR = "#aaaaaa";
+
+        // Draw border
+        gl.strokeStyle = BORDER_COLOR;
+        gl.fillStyle = BORDER_COLOR;
         gl.lineWidth = 30;
         const AMOUNT = 30;
         const ROUNDING = 40;
@@ -248,17 +256,65 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
         gl.arcTo(0, 0, AMOUNT, 0, ROUNDING);
         gl.stroke();
 
-        const CORNER_W = 180,
-            CORNER_H = 120;
+        // Draw border corners
         const CORNER_RADIUS = 5;
-        gl.fillStyle = "white";
+        const TOP_CORNER_W = 130,
+            TOP_CORNER_H = 180;
         gl.beginPath();
         gl.moveTo(0, 0);
-        gl.lineTo(CORNER_W, 0);
-        gl.lineTo(CORNER_W, CORNER_H - CORNER_RADIUS);
-        gl.arcTo(CORNER_W, CORNER_H, CORNER_W - CORNER_RADIUS, CORNER_H, 20);
-        gl.lineTo(0, CORNER_H);
+        gl.lineTo(TOP_CORNER_W, 0);
+        gl.lineTo(TOP_CORNER_W, TOP_CORNER_H - CORNER_RADIUS);
+        gl.arcTo(TOP_CORNER_W, TOP_CORNER_H, TOP_CORNER_W - CORNER_RADIUS, TOP_CORNER_H, 20);
+        gl.lineTo(0, TOP_CORNER_H);
         gl.fill();
+        const BOTTOM_CORNER_W = 130,
+            BOTTOM_CORNER_H = 180;
+        gl.beginPath();
+        gl.moveTo(w, h);
+        gl.lineTo(w - BOTTOM_CORNER_W, h);
+        gl.lineTo(w - BOTTOM_CORNER_W, h - BOTTOM_CORNER_H + CORNER_RADIUS);
+        gl.arcTo(w - BOTTOM_CORNER_W, h - BOTTOM_CORNER_H, w - BOTTOM_CORNER_W + CORNER_RADIUS, h - BOTTOM_CORNER_H, 20);
+        gl.lineTo(w, h - BOTTOM_CORNER_H);
+        gl.fill();
+
+        // Draw corner value
+        gl.textAlign = "center";
+        gl.fillStyle = BORDER_TEXT_COLOR;
+        gl.font = "120px Bangers";
+
+        gl.fillText(form.values.value, 62, 117);
+
+        gl.save();
+        gl.translate(w - 62, h - 117);
+        gl.rotate(Math.PI);
+        gl.fillText(form.values.value, 0, 0);
+        gl.restore();
+
+        // gl.rotate(Math.PI);
+
+        // Draw corner value description
+        if (form.values.valueDescription) {
+            gl.fillStyle = BORDER_TEXT_SMALL_COLOR;
+            gl.font = form.values.valueDescription.length > 10 ? "20px Bangers" : "30px Bangers";
+
+            gl.fillText(form.values.valueDescription, 62, 160);
+
+            gl.save();
+            gl.translate(w - 62, h - 160);
+            gl.rotate(Math.PI);
+            gl.fillText(form.values.valueDescription, 0, 0);
+            gl.restore();
+        }
+
+        if (form.values.text) {
+            gl.textAlign = "center";
+            gl.font = "50px Source Sans Pro";
+            gl.fillStyle = "white";
+            let lines = form.values.text.split("\n");
+            for (let i = 0; i < lines.length; i++) {
+                gl.fillText(lines[i], w / 2, h * 0.7 + i * 55);
+            }
+        }
 
         // gl.lineWidth = 50;
         // gl.strokeStyle = "yellow";
@@ -266,10 +322,6 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
 
         // gl.fillStyle = "white";
         // gl.fillRect(100, h / 2, w - 200, h / 2 - 100);
-
-        gl.fillStyle = "#555";
-        gl.font = "100px Arial";
-        gl.fillText(form.values.value, 10, 100);
     }
 
     useEffect(() => {
@@ -310,6 +362,10 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
                 <Field form={form} name="value" placeholder="3" />
                 <label htmlFor="">Waarde beschrijving</label>
                 <Field form={form} name="valueDescription" placeholder="brie" />
+                <label htmlFor="">Tekst</label>
+                <Field as="textarea" form={form} name="text" />
+                <label htmlFor="">Beschrijving</label>
+                <Field as="textarea" form={form} name="description" />
                 <label htmlFor="">Foto id</label>
                 <Field form={form} name="imageId" />
                 <label htmlFor="">Foto x</label>
@@ -320,6 +376,7 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
                 <Field min={200} max={1600} type="range" form={form} name="imageWidth" />
                 <label htmlFor="">Foto h</label>
                 <Field min={200} max={2400} type="range" form={form} name="imageHeight" />
+
                 <button type="submit" className="bg-blue-600 text-white">
                     Opslaan
                 </button>
