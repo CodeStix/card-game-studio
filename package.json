@@ -10,7 +10,8 @@
     "idb": "^6.1.2",
     "nanoid": "^3.1.25",
     "react": "^17.0.0",
-    "react-dom": "^17.0.0"
+    "react-dom": "^17.0.0",
+    "typed-react-form": "^2.2.3"
   },
   "devDependencies": {
     "@types/react": "^17.0.0",

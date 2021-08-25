@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import * as idb from "idb";
+import { Field, useForm } from "typed-react-form";
 
 interface ImageFile {
     id: string;
@@ -44,21 +45,27 @@ export function App() {
 export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
     const [card, setCard] = useState<Card>();
     const [images, setImages] = useState<ImageFile[]>([]);
+    const [cards, setCards] = useState<Card[]>([]);
 
     async function refreshImages() {
         setImages(await database.getAll("image"));
     }
 
+    async function refreshCards() {
+        setCards(await database.getAll("card"));
+    }
+
     useEffect(() => {
         refreshImages();
+        refreshCards();
     }, []);
 
     return (
         <div className="h-full flex flex-col">
             <div className="bg-white border-b px-4 py-2 font-bold text-blue-500">CARD GAME STUDIO</div>
-            <div className="flex bg-gray-100 flex-grow">
-                <div className="p-4 flex-grow">
-                    <h2 className="text-xl font-bold">Foto's</h2>
+            <div className="grid grid-cols-3 bg-gray-100 flex-grow">
+                <div className="p-4">
+                    <h2 className="text-xl font-bold">{images.length} foto's</h2>
                     <input
                         multiple
                         className="my-2"
@@ -112,31 +119,64 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                         ))}
                     </div>
                 </div>
-                <div className="flex-grow">
-                    <button
-                        className="w-64"
-                        onClick={() => {
-                            let newCard = { value: "", valueDescription: "", id: nanoid(), backgroundId: null };
-                            setCard(newCard);
-                        }}>
-                        New card
-                    </button>
+                <div className="border-l">
+                    <div className="p-4">
+                        <div className="flex mb-2">
+                            <h2 className="text-xl font-bold">{cards.length} kaarten</h2>
+                            <button
+                                className="px-2 py-1 bg-blue-600 text-white ml-auto"
+                                onClick={async () => {
+                                    let newCard = { value: "", valueDescription: "", id: nanoid(), backgroundId: null } as Card;
+                                    await database.add("card", newCard);
+                                    setCard(newCard);
+                                }}>
+                                New card
+                            </button>
+                        </div>
+                        <div>
+                            {cards.map((card) => (
+                                <div className="p-2 bg-white border" onClick={() => setCard(card)}>
+                                    <h2 className="text-xl">
+                                        {card.value} <small className="">{card.valueDescription}</small>
+                                    </h2>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                <div className="border-l">
                     {card && (
-                        <div className="flex-shrink-0 border-l">
-                            <div className="grid" style={{ gridTemplateColumns: "200px 1fr" }}>
-                                <label htmlFor="">Waarde</label>
-                                <input placeholder="3" value={card.value} onChange={(ev) => setCard({ ...card, value: ev.target.value })} />
-                                <label htmlFor="">Waarde beschrijving</label>
-                                <input
-                                    placeholder="brie"
-                                    value={card.valueDescription}
-                                    onChange={(ev) => setCard({ ...card, valueDescription: ev.target.value })}
-                                />
-                            </div>
+                        <div className="flex-shrink-0 p-4">
+                            <CardForm
+                                card={card}
+                                onChange={async (c) => {
+                                    await database.put("card", c);
+                                    refreshCards();
+                                }}
+                            />
                         </div>
                     )}
                 </div>
             </div>
         </div>
+    );
+}
+
+function CardForm(props: { card: Card; onChange: (card: Card) => void }) {
+    const form = useForm(props.card);
+
+    return (
+        <form
+            onSubmit={form.handleSubmit(() => {
+                props.onChange(form.values);
+            })}>
+            <div className="grid gap-2" style={{ gridTemplateColumns: "200px 1fr" }}>
+                <label htmlFor="">Waarde</label>
+                <Field form={form} name="value" placeholder="3" />
+                <label htmlFor="">Waarde beschrijving</label>
+                <Field form={form} name="valueDescription" placeholder="brie" />
+                <button className="bg-blue-600 text-white">Opslaan</button>
+            </div>
+        </form>
     );
 }
