@@ -192,6 +192,7 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
 
 function CardForm(props: { card: Card; onChange: (card: Card) => void; database: idb.IDBPDatabase }) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const imageRef = useRef<HTMLImageElement>();
     const form = useForm(props.card);
 
     useEffect(() => {
@@ -205,13 +206,34 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
         gl.fillStyle = "white";
         gl.fillRect(0, 0, w, h);
 
-        if (form.values.imageId) {
-            let image = (await props.database.get("image", form.values.imageId)) as ImageFile;
-            if (image) {
-                let img = await imageFileToImage(image);
-                gl.drawImage(img, form.values.imageX ?? 0, form.values.imageY ?? 0, form.values.imageWidth ?? w, form.values.imageHeight ?? h);
-            }
+        if (imageRef.current) {
+            gl.drawImage(
+                imageRef.current,
+                form.values.imageX ?? 0,
+                form.values.imageY ?? 0,
+                form.values.imageWidth ?? w,
+                form.values.imageHeight ?? h
+            );
         }
+
+        let bottomGradient = gl.createLinearGradient(0, 0, 0, h);
+        bottomGradient.addColorStop(0.5, "#00000000");
+        bottomGradient.addColorStop(1, "#000000aa");
+        gl.fillStyle = bottomGradient;
+        gl.fillRect(0, 0, w, h);
+
+        let topGradient = gl.createLinearGradient(0, 0, 0, h);
+        topGradient.addColorStop(0, "#000000aa");
+        topGradient.addColorStop(0.5, "#00000000");
+        gl.fillStyle = topGradient;
+        gl.fillRect(0, 0, w, h);
+
+        // gl.lineWidth = 50;
+        // gl.strokeStyle = "yellow";
+        // gl.strokeRect(0, 0, w, h);
+
+        gl.fillStyle = "white";
+        gl.fillRect(100, h / 2, w - 200, h / 2 - 100);
 
         gl.fillStyle = "red";
         gl.font = "100px Arial";
@@ -219,10 +241,28 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
     }
 
     useEffect(() => {
+        let imageId = form.listen("imageId", async () => {
+            if (form.values.imageId) {
+                if (!imageRef.current || form.values.imageId !== (imageRef.current as any).imageId) {
+                    console.log("loading", form.values.imageId);
+                    let dbImage = (await props.database.get("image", form.values.imageId)) as ImageFile;
+                    if (dbImage) {
+                        let img = await imageFileToImage(dbImage);
+                        (img as any).imageId = form.values.imageId;
+                        imageRef.current = img;
+                        updateCanvas();
+                    }
+                }
+            } else {
+                imageRef.current = undefined;
+            }
+        });
+
         let id = form.listenAny(() => {
             setTimeout(() => updateCanvas(), 1);
         });
         return () => {
+            form.ignore("imageId", imageId);
             form.ignoreAny(id);
         };
     }, []);
@@ -241,13 +281,13 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
                 <label htmlFor="">Foto id</label>
                 <Field form={form} name="imageId" />
                 <label htmlFor="">Foto x</label>
-                <Field min={-10000} type="number" form={form} name="imageX" />
+                <Field min={-400} max={400} type="range" form={form} name="imageX" />
                 <label htmlFor="">Foto y</label>
-                <Field min={-10000} type="number" form={form} name="imageY" />
+                <Field min={-400} max={400} type="range" form={form} name="imageY" />
                 <label htmlFor="">Foto w</label>
-                <Field min={-10000} type="number" form={form} name="imageWidth" />
+                <Field min={200} max={1600} type="range" form={form} name="imageWidth" />
                 <label htmlFor="">Foto h</label>
-                <Field min={-10000} type="number" form={form} name="imageHeight" />
+                <Field min={200} max={2400} type="range" form={form} name="imageHeight" />
                 <button type="submit" className="bg-blue-600 text-white">
                     Opslaan
                 </button>
