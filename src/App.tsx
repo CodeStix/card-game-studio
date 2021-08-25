@@ -53,7 +53,7 @@ export function App() {
                 {state.files.map((file) => (
                     <div key={file.name}>
                         <h2>{file.name}</h2>
-                        <img className="w-52 h-52" src={imageFileToDataUrl(file)} />
+                        <img className="w-52 " src={imageFileToDataUrl(file)} />
                         <button onClick={() => setState({ ...state, files: state.files.filter((e) => e.id !== file.id) })}>Remove</button>
                     </div>
                 ))}
