@@ -20,6 +20,11 @@ interface Card {
     value: string;
     valueDescription: string;
     text: string;
+    textFont?: string;
+    textColor?: string;
+    borderColor?: string;
+    borderTextColor?: string;
+    noGradient: boolean;
     description: string;
 }
 
@@ -65,11 +70,15 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
     const [cards, setCards] = useState<Card[]>([]);
 
     async function refreshImages() {
-        setImages(await database.getAll("image"));
+        let i = (await database.getAll("image")) as ImageFile[];
+        i.sort((a, b) => a.name.localeCompare(b.name));
+        setImages(i);
     }
 
     async function refreshCards() {
-        setCards(await database.getAll("card"));
+        let c = (await database.getAll("card")) as Card[];
+        c.sort((a, b) => a.value.localeCompare(b.value));
+        setCards(c);
     }
 
     useEffect(() => {
@@ -162,6 +171,7 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                         <div>
                             {cards.map((c) => (
                                 <div
+                                    key={c.id}
                                     className={"p-2 rounded-md bg-white border " + (c.id === card?.id ? "border-black" : "")}
                                     onClick={() => setCard(c)}>
                                     <h2 className="text-xl">
@@ -175,7 +185,18 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                 <div className="border-l">
                     {card && (
                         <div className="flex-shrink-0 p-4">
-                            <h2 className="text-xl font-bold mb-4">Kaart aanpassen</h2>
+                            <div className="flex">
+                                <h2 className="text-xl font-bold mb-4">Kaart aanpassen</h2>
+                                <button
+                                    className="px-4 py-2 text-red-600 ml-auto"
+                                    onClick={async () => {
+                                        await database.delete("card", card.id);
+                                        setCard(undefined);
+                                        refreshCards();
+                                    }}>
+                                    Remove
+                                </button>
+                            </div>
                             <CardForm
                                 database={database}
                                 card={card}
@@ -218,25 +239,42 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
             );
         }
 
-        let bottomGradient = gl.createLinearGradient(0, 0, 0, h);
-        bottomGradient.addColorStop(0.5, "#00000000");
-        bottomGradient.addColorStop(1, "#000000aa");
-        gl.fillStyle = bottomGradient;
-        gl.fillRect(0, 0, w, h);
+        if (!form.values.noGradient) {
+            let bottomGradient = gl.createLinearGradient(0, 0, 0, h);
+            bottomGradient.addColorStop(0.5, "#00000000");
+            bottomGradient.addColorStop(1, "#00000099");
+            gl.fillStyle = bottomGradient;
+            gl.fillRect(0, 0, w, h);
 
-        let topGradient = gl.createLinearGradient(0, 0, 0, h);
-        topGradient.addColorStop(0, "#000000aa");
-        topGradient.addColorStop(0.5, "#00000000");
-        gl.fillStyle = topGradient;
-        gl.fillRect(0, 0, w, h);
+            let topGradient = gl.createLinearGradient(0, 0, 0, h);
+            topGradient.addColorStop(0, "#00000099");
+            topGradient.addColorStop(0.5, "#00000000");
+            gl.fillStyle = topGradient;
+            gl.fillRect(0, 0, w, h);
+        }
 
-        const BORDER_COLOR = "white";
-        const BORDER_TEXT_COLOR = "#555555";
-        const BORDER_TEXT_SMALL_COLOR = "#aaaaaa";
+        if (form.values.text) {
+            let lines = form.values.text.split("\n");
+
+            gl.fillStyle = "#000000aa";
+            let height = h * 0.7;
+            gl.fillRect(0, height - 43, w, lines.length * 55 + 10);
+
+            gl.textAlign = "center";
+            gl.font = form.values.textFont || "40px Besley";
+            gl.fillStyle = "white";
+            for (let i = 0; i < lines.length; i++) {
+                gl.fillText(lines[i], w / 2, height + 5 + i * 55);
+            }
+        }
+
+        let borderColor = form.values.borderColor || "white";
+        let borderTextColor = form.values.borderTextColor || "#555555";
+        let borderTextSmallColor = "#aaaaaa";
 
         // Draw border
-        gl.strokeStyle = BORDER_COLOR;
-        gl.fillStyle = BORDER_COLOR;
+        gl.strokeStyle = borderColor;
+        gl.fillStyle = borderColor;
         gl.lineWidth = 30;
         const AMOUNT = 30;
         const ROUNDING = 40;
@@ -279,41 +317,25 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
 
         // Draw corner value
         gl.textAlign = "center";
-        gl.fillStyle = BORDER_TEXT_COLOR;
+        gl.fillStyle = borderTextColor;
         gl.font = "120px Bangers";
-
         gl.fillText(form.values.value, 62, 117);
-
         gl.save();
         gl.translate(w - 62, h - 117);
         gl.rotate(Math.PI);
         gl.fillText(form.values.value, 0, 0);
         gl.restore();
 
-        // gl.rotate(Math.PI);
-
         // Draw corner value description
         if (form.values.valueDescription) {
-            gl.fillStyle = BORDER_TEXT_SMALL_COLOR;
+            gl.fillStyle = borderTextSmallColor;
             gl.font = form.values.valueDescription.length > 10 ? "20px Bangers" : "30px Bangers";
-
             gl.fillText(form.values.valueDescription, 62, 160);
-
             gl.save();
             gl.translate(w - 62, h - 160);
             gl.rotate(Math.PI);
             gl.fillText(form.values.valueDescription, 0, 0);
             gl.restore();
-        }
-
-        if (form.values.text) {
-            gl.textAlign = "center";
-            gl.font = "50px Source Sans Pro";
-            gl.fillStyle = "white";
-            let lines = form.values.text.split("\n");
-            for (let i = 0; i < lines.length; i++) {
-                gl.fillText(lines[i], w / 2, h * 0.7 + i * 55);
-            }
         }
 
         // gl.lineWidth = 50;
@@ -364,8 +386,18 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
                 <Field form={form} name="valueDescription" placeholder="brie" />
                 <label htmlFor="">Tekst</label>
                 <Field as="textarea" form={form} name="text" />
+                <label htmlFor="">Tekst font</label>
+                <Field placeholder="45px Source Sans Pro" type="text" form={form} name="textFont" />
+                <label htmlFor="">Tekst kleur</label>
+                <Field type="color" form={form} name="textColor" />
+                <label htmlFor="">Kader kleur</label>
+                <Field type="color" form={form} name="borderColor" />
+                <label htmlFor="">Kader tekst kleur</label>
+                <Field type="color" form={form} name="borderTextColor" />
                 <label htmlFor="">Beschrijving</label>
                 <Field as="textarea" form={form} name="description" />
+                <label htmlFor="">Geen overgang</label>
+                <Field form={form} type="checkbox" name="noGradient" />
                 <label htmlFor="">Foto id</label>
                 <Field form={form} name="imageId" />
                 <label htmlFor="">Foto x</label>
