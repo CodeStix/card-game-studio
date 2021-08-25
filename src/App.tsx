@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
+import * as idb from "idb";
 
 interface ImageFile {
     id: string;
@@ -8,8 +9,11 @@ interface ImageFile {
     base64: string;
 }
 
-interface Storage {
-    files: ImageFile[];
+interface Card {
+    id: string;
+    backgroundId: number | null;
+    value: string;
+    valueDescription: string;
 }
 
 function imageFileToDataUrl(image: ImageFile) {
@@ -17,16 +21,45 @@ function imageFileToDataUrl(image: ImageFile) {
 }
 
 export function App() {
-    const [state, setState] = useState<Storage>(JSON.parse(localStorage.getItem("cgs") as string) || { files: [] });
+    const [database, setDatabase] = useState<idb.IDBPDatabase>();
 
     useEffect(() => {
-        localStorage.setItem("cgs", JSON.stringify(state));
-    }, [state]);
+        idb.openDB("cgs", 1, {
+            upgrade: (db, oldVersion, newVersion, transaction) => {
+                if (oldVersion === 0) {
+                    db.createObjectStore("image", { keyPath: "id" });
+                    db.createObjectStore("card", { keyPath: "id" });
+                }
+            },
+        }).then(setDatabase);
+    }, []);
+
+    if (!database) {
+        return <p>loading...</p>;
+    } else {
+        return <Dashboard database={database} />;
+    }
+}
+
+export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
+    const [card, setCard] = useState<Card>();
+    const [images, setImages] = useState<ImageFile[]>([]);
+
+    async function refreshImages() {
+        setImages(await database.getAll("image"));
+    }
+
+    useEffect(() => {
+        refreshImages();
+    }, []);
 
     return (
-        <div className="p-8">
-            <div>
+        <div>
+            <div className="p-4 border">
+                <h2 className="text-xl text-blue-500 font-bold">Foto's</h2>
                 <input
+                    multiple
+                    className="my-2"
                     type="file"
                     onChange={async (ev) => {
                         let files = ev.target.files;
@@ -43,20 +76,51 @@ export function App() {
 
                             let base64Raw = btoa(binary);
                             // let base64 = `data:image/png;base64,${base64Raw}`;
-
-                            setState({ ...state, files: [...state.files, { base64: base64Raw, type: file.type, name: file.name, id: nanoid() }] });
+                            await database.add("image", { base64: base64Raw, type: file.type, name: file.name, id: nanoid() });
+                            refreshImages();
                         }
                     }}
                 />
+                <div className="flex-grow flex flex-wrap ">
+                    {images.map((file) => (
+                        <div key={file.name} className="border">
+                            <h2 className="text-sm font-mono px-2 pt-2">{file.name}</h2>
+                            <p className="font-mono text-xs px-2 pb-2">{file.id}</p>
+                            <img className="w-20 px-2" src={imageFileToDataUrl(file)} />
+                            <button
+                                className="px-4 py-2"
+                                onClick={async () => {
+                                    await database.delete("image", file.id);
+                                    refreshImages();
+                                }}>
+                                Remove
+                            </button>
+                        </div>
+                    ))}
+                </div>
             </div>
-            <div>
-                {state.files.map((file) => (
-                    <div key={file.name}>
-                        <h2>{file.name}</h2>
-                        <img className="w-52 " src={imageFileToDataUrl(file)} />
-                        <button onClick={() => setState({ ...state, files: state.files.filter((e) => e.id !== file.id) })}>Remove</button>
+            <div className="flex">
+                <button
+                    onClick={() => {
+                        let newCard = { value: "", valueDescription: "", id: nanoid(), backgroundId: null };
+                        setCard(newCard);
+                    }}>
+                    New card
+                </button>
+                {card && (
+                    <div className="flex-shrink-0 border-l">
+                        <div className="grid" style={{ gridTemplateColumns: "200px 1fr" }}>
+                            <label htmlFor="">Waarde</label>
+                            <input placeholder="3" value={card.value} onChange={(ev) => setCard({ ...card, value: ev.target.value })} />
+                            <label htmlFor="">Waarde beschrijving</label>
+                            <input
+                                placeholder="brie"
+                                value={card.valueDescription}
+                                onChange={(ev) => setCard({ ...card, valueDescription: ev.target.value })}
+                            />
+                        </div>
                     </div>
-                ))}
+                )}
             </div>
         </div>
     );
