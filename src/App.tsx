@@ -228,14 +228,46 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
         gl.fillStyle = topGradient;
         gl.fillRect(0, 0, w, h);
 
+        gl.strokeStyle = "white";
+        gl.lineWidth = 30;
+        const AMOUNT = 30;
+        const ROUNDING = 40;
+        gl.beginPath();
+        gl.moveTo(0, 0);
+        gl.lineTo(w, 0);
+        gl.lineTo(w - AMOUNT, 0);
+        gl.arcTo(w, 0, w, AMOUNT, ROUNDING);
+        gl.lineTo(w, h);
+        gl.lineTo(w, h - AMOUNT);
+        gl.arcTo(w, h, w - AMOUNT, h, ROUNDING);
+        gl.lineTo(0, h);
+        gl.lineTo(AMOUNT, h);
+        gl.arcTo(0, h, 0, h - AMOUNT, ROUNDING);
+        gl.lineTo(0, 0);
+        gl.lineTo(0, AMOUNT);
+        gl.arcTo(0, 0, AMOUNT, 0, ROUNDING);
+        gl.stroke();
+
+        const CORNER_W = 180,
+            CORNER_H = 120;
+        const CORNER_RADIUS = 5;
+        gl.fillStyle = "white";
+        gl.beginPath();
+        gl.moveTo(0, 0);
+        gl.lineTo(CORNER_W, 0);
+        gl.lineTo(CORNER_W, CORNER_H - CORNER_RADIUS);
+        gl.arcTo(CORNER_W, CORNER_H, CORNER_W - CORNER_RADIUS, CORNER_H, 20);
+        gl.lineTo(0, CORNER_H);
+        gl.fill();
+
         // gl.lineWidth = 50;
         // gl.strokeStyle = "yellow";
         // gl.strokeRect(0, 0, w, h);
 
-        gl.fillStyle = "white";
-        gl.fillRect(100, h / 2, w - 200, h / 2 - 100);
+        // gl.fillStyle = "white";
+        // gl.fillRect(100, h / 2, w - 200, h / 2 - 100);
 
-        gl.fillStyle = "red";
+        gl.fillStyle = "#555";
         gl.font = "100px Arial";
         gl.fillText(form.values.value, 10, 100);
     }
