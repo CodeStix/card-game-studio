@@ -229,6 +229,7 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
         gl.fillStyle = "white";
         gl.fillRect(0, 0, w, h);
 
+        // Draw background
         if (imageRef.current) {
             gl.drawImage(
                 imageRef.current,
@@ -239,6 +240,7 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
             );
         }
 
+        // Draw gradients
         if (!form.values.noGradient) {
             let bottomGradient = gl.createLinearGradient(0, 0, 0, h);
             bottomGradient.addColorStop(0.5, "#00000000");
@@ -253,19 +255,39 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
             gl.fillRect(0, 0, w, h);
         }
 
+        // Draw main text
         if (form.values.text) {
             let lines = form.values.text.split("\n");
 
             gl.fillStyle = "#000000aa";
-            let height = h * 0.7;
-            gl.fillRect(0, height - 43, w, lines.length * 55 + 10);
+            gl.fillRect(0, h * 0.7 - 43, w, lines.length * 55 + 10);
 
             gl.textAlign = "center";
             gl.font = form.values.textFont || "40px Besley";
             gl.fillStyle = "white";
             for (let i = 0; i < lines.length; i++) {
-                gl.fillText(lines[i], w / 2, height + 5 + i * 55);
+                gl.fillText(lines[i], w / 2, h * 0.7 + 5 + i * 55);
             }
+        }
+
+        if (form.values.description) {
+            let lines = form.values.description.split("\n");
+
+            gl.fillStyle = "#aaaaaa";
+            gl.textAlign = "left";
+            gl.font = "bold 25px Besley";
+            for (let i = 0; i < lines.length; i++) {
+                gl.fillText(lines[i].toUpperCase(), 160, 70 + i * 27);
+            }
+
+            gl.save();
+            gl.translate(w, h);
+            gl.rotate(Math.PI);
+            for (let i = 0; i < lines.length; i++) {
+                gl.fillText(lines[i].toUpperCase(), 160, 70 + i * 27);
+            }
+
+            gl.restore();
         }
 
         let borderColor = form.values.borderColor || "white";
