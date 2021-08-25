@@ -1,5 +1,5 @@
 import React from "react";
 
 export function App() {
-    return <div>this is a test</div>;
+    return <div className="text-blue-500">this is a test</div>;
 }
