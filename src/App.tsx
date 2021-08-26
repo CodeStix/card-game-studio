@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import * as idb from "idb";
 import { Field, useForm } from "typed-react-form";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 interface ImageFile {
     id: string;
@@ -69,6 +71,7 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
     const [card, setCard] = useState<Card>();
     const [images, setImages] = useState<ImageFile[]>([]);
     const [cards, setCards] = useState<Card[]>([]);
+    const processLabelRef = useRef<HTMLParagraphElement>(null);
 
     async function refreshImages() {
         let i = (await database.getAll("image")) as ImageFile[];
@@ -153,10 +156,43 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                 </div>
                 <div className="border-l">
                     <div className="p-4">
-                        <div className="flex mb-2">
+                        <div className="flex mb-2 items-center">
                             <h2 className="text-xl font-bold">{cards.length} cards</h2>
+                            <p className="ml-auto mr-1" ref={processLabelRef}></p>
                             <button
-                                className="px-2 py-1 bg-blue-600 text-white ml-auto"
+                                className="bg-blue-600 px-4 py-1 text-white mr-1"
+                                onClick={async () => {
+                                    let zip = new JSZip();
+                                    let allCards = (await database.getAll("card")) as Card[];
+                                    for (let i = 0; i < allCards.length; i++) {
+                                        let card = allCards[i];
+
+                                        processLabelRef.current!.innerText = `Creating zip file ${i + 1}/${allCards.length}`;
+
+                                        if (card.base64) {
+                                            let headerIndex = card.base64.indexOf(",");
+                                            if (headerIndex > 0) {
+                                                zip.file(i + ".png", card.base64.substring(headerIndex + 1), { base64: true });
+                                            } else {
+                                                zip.file(i + ".png", card.base64, { base64: true });
+                                            }
+                                        }
+
+                                        zip.file(i + ".json", JSON.stringify(card));
+                                    }
+
+                                    let result = await zip.generateAsync({ type: "blob" }, (data) => {
+                                        processLabelRef.current!.innerText = `Exporting... ${data.currentFile} (${Math.round(data.percent)}%)`;
+                                    });
+
+                                    processLabelRef.current!.innerText = "Done, download will start soon...";
+                                    setTimeout(() => (processLabelRef.current!.innerText = ""), 5000);
+                                    saveAs(result, "game.zip");
+                                }}>
+                                Export as zip
+                            </button>
+                            <button
+                                className="px-2 py-1 bg-blue-600 text-white"
                                 onClick={async () => {
                                     let newCard = {
                                         value: "",
@@ -207,6 +243,15 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                                     }}>
                                     Remove
                                 </button>
+                                {card.base64 && (
+                                    <button
+                                        className="text-blue-600 ml-1"
+                                        onClick={async () => {
+                                            saveAs(card.base64!, card.id + ".png");
+                                        }}>
+                                        Download
+                                    </button>
+                                )}
                             </div>
                             <CardForm
                                 database={database}
