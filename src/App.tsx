@@ -26,6 +26,7 @@ interface Card {
     borderTextColor?: string;
     noGradient: boolean;
     description: string;
+    base64?: string;
 }
 
 function imageFileToDataUrl(image: ImageFile) {
@@ -116,9 +117,9 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                             }
                         }}
                     />
-                    <div className="flex-grow flex flex-wrap ">
+                    <div className="grid gap-1" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))" }}>
                         {images.map((file) => (
-                            <div key={file.name} className="border bg-white rounded-md">
+                            <div key={file.name} className="border bg-white rounded-md overflow-hidden flex flex-col">
                                 <h2 className="text-sm font-mono px-2 pt-2">
                                     <input
                                         defaultValue={file.name}
@@ -131,10 +132,10 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                                         }}
                                     />
                                 </h2>
-                                <p className="font-mono text-xs px-2 pb-2">{file.id}</p>
-                                <img className="w-20 px-2" src={imageFileToDataUrl(file)} />
+                                <input readOnly className="font-mono text-xs px-2 pb-2" value={file.id} />
+                                <img className="h-32 px-2" src={imageFileToDataUrl(file)} />
                                 <button
-                                    className="px-4 py-2 text-red-600"
+                                    className="text-red-600 mt-auto"
                                     onClick={async () => {
                                         await database.delete("image", file.id);
                                         refreshImages();
@@ -168,14 +169,19 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                                 New card
                             </button>
                         </div>
-                        <div>
+                        <div className="grid gap-1" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
                             {cards.map((c) => (
                                 <div
                                     key={c.id}
                                     className={"p-2 rounded-md bg-white border " + (c.id === card?.id ? "border-black" : "")}
                                     onClick={() => setCard(c)}>
-                                    <h2 className="text-xl">
-                                        {c.value} <small className="">{c.valueDescription}</small>
+                                    <h2 className="text-xl flex">
+                                        <div>
+                                            {c.value} <small className="">{c.valueDescription}</small>
+                                            <p className="text-sm">{c.description}</p>
+                                            <p className="leading-4 text-sm text-gray-500">{c.text}</p>
+                                        </div>
+                                        {c.base64 && <img src={c.base64} className="ml-auto w-16 border" />}
                                     </h2>
                                 </div>
                             ))}
@@ -372,7 +378,6 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
         let imageId = form.listen("imageId", async () => {
             if (form.values.imageId) {
                 if (!imageRef.current || form.values.imageId !== (imageRef.current as any).imageId) {
-                    console.log("loading", form.values.imageId);
                     let dbImage = (await props.database.get("image", form.values.imageId)) as ImageFile;
                     if (dbImage) {
                         let img = await imageFileToImage(dbImage);
@@ -399,7 +404,10 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
         <form
             className="flex flex-col"
             onSubmit={form.handleSubmit(() => {
-                props.onChange(form.values);
+                props.onChange({
+                    ...form.values,
+                    base64: canvasRef.current!.toDataURL(),
+                });
             })}>
             <div className="grid gap-2" style={{ gridTemplateColumns: "200px 1fr" }}>
                 <label htmlFor="">Waarde</label>
@@ -423,9 +431,9 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
                 <label htmlFor="">Foto id</label>
                 <Field form={form} name="imageId" />
                 <label htmlFor="">Foto x</label>
-                <Field min={-400} max={400} type="range" form={form} name="imageX" />
+                <Field min={-800} max={800} type="range" form={form} name="imageX" />
                 <label htmlFor="">Foto y</label>
-                <Field min={-400} max={400} type="range" form={form} name="imageY" />
+                <Field min={-800} max={800} type="range" form={form} name="imageY" />
                 <label htmlFor="">Foto w</label>
                 <Field min={200} max={1600} type="range" form={form} name="imageWidth" />
                 <label htmlFor="">Foto h</label>
