@@ -125,6 +125,7 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                             <div key={file.name} className="border bg-white rounded-md overflow-hidden flex flex-col">
                                 <h2 className="text-sm font-mono px-2 pt-2 flex flex-col">
                                     <input
+                                        onClick={(ev) => (ev.target as HTMLInputElement).select()}
                                         defaultValue={file.name}
                                         onBlur={async (ev) => {
                                             await database.put("image", {
@@ -243,6 +244,19 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                                     }}>
                                     Remove
                                 </button>
+                                <button
+                                    className="text-blue-600 ml-1"
+                                    onClick={async () => {
+                                        let newCard = {
+                                            ...card,
+                                            id: nanoid(),
+                                        };
+                                        await database.add("card", newCard);
+                                        setCard(newCard);
+                                        refreshCards();
+                                    }}>
+                                    Duplicate
+                                </button>
                                 {card.base64 && (
                                     <button
                                         className="text-blue-600 ml-1"
@@ -257,6 +271,7 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                                 database={database}
                                 card={card}
                                 onChange={async (c) => {
+                                    setCard(c);
                                     await database.put("card", c);
                                     refreshCards();
                                 }}
@@ -284,6 +299,11 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
         let gl = canvasRef.current!.getContext("2d")!;
         gl.fillStyle = "white";
         gl.fillRect(0, 0, w, h);
+
+        let borderColor = form.values.borderColor || "white";
+        let borderTextColor = form.values.borderTextColor || "#555555";
+        let borderTextSmallColor = "#aaaaaa";
+        let textColor = form.values.textColor || "white";
 
         // Draw background
         if (imageRef.current) {
@@ -320,11 +340,13 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
 
             gl.textAlign = "center";
             gl.font = form.values.textFont || "40px Besley";
-            gl.fillStyle = "white";
+            gl.fillStyle = textColor;
             for (let i = 0; i < lines.length; i++) {
                 gl.fillText(lines[i], w / 2, h * 0.7 + 5 + i * 55);
             }
         }
+
+        let cornerWidth = 80 + form.values.value.length * 60;
 
         if (form.values.description) {
             let lines = form.values.description.split("\n");
@@ -333,26 +355,31 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
             gl.textAlign = "left";
             gl.font = "bold 25px Besley";
             for (let i = 0; i < lines.length; i++) {
-                gl.fillText(lines[i].toUpperCase(), 160, 70 + i * 27);
+                gl.fillText(lines[i].toUpperCase(), cornerWidth + 35, 70 + i * 27);
             }
 
             gl.save();
             gl.translate(w, h);
             gl.rotate(Math.PI);
             for (let i = 0; i < lines.length; i++) {
-                gl.fillText(lines[i].toUpperCase(), 160, 70 + i * 27);
+                gl.fillText(lines[i].toUpperCase(), cornerWidth + 35, 70 + i * 27);
             }
 
             gl.restore();
         }
 
-        let borderColor = form.values.borderColor || "white";
-        let borderTextColor = form.values.borderTextColor || "#555555";
-        let borderTextSmallColor = "#aaaaaa";
+        let rainbow = gl.createLinearGradient(0, 0, 0, h);
+        rainbow.addColorStop(0, "#ff3333");
+        rainbow.addColorStop(1 / 6, "#eeee00");
+        rainbow.addColorStop(2 / 6, "#11ee11");
+        rainbow.addColorStop(3 / 6, "#11eeee");
+        rainbow.addColorStop(4 / 6, "#0055ff");
+        rainbow.addColorStop(5 / 6, "#ff55ff");
+        rainbow.addColorStop(6 / 6, "#ff3333");
 
         // Draw border
-        gl.strokeStyle = borderColor;
-        gl.fillStyle = borderColor;
+        gl.strokeStyle = borderColor === "rainbow" ? rainbow : borderColor;
+        gl.fillStyle = borderColor === "rainbow" ? rainbow : borderColor;
         gl.lineWidth = 30;
         const AMOUNT = 30;
         const ROUNDING = 40;
@@ -374,7 +401,7 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
 
         // Draw border corners
         const CORNER_RADIUS = 5;
-        const TOP_CORNER_W = 130,
+        const TOP_CORNER_W = cornerWidth,
             TOP_CORNER_H = 180;
         gl.beginPath();
         gl.moveTo(0, 0);
@@ -383,7 +410,7 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
         gl.arcTo(TOP_CORNER_W, TOP_CORNER_H, TOP_CORNER_W - CORNER_RADIUS, TOP_CORNER_H, 20);
         gl.lineTo(0, TOP_CORNER_H);
         gl.fill();
-        const BOTTOM_CORNER_W = 130,
+        const BOTTOM_CORNER_W = cornerWidth,
             BOTTOM_CORNER_H = 180;
         gl.beginPath();
         gl.moveTo(w, h);
@@ -397,9 +424,9 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
         gl.textAlign = "center";
         gl.fillStyle = borderTextColor;
         gl.font = "120px Bangers";
-        gl.fillText(form.values.value, 62, 117);
+        gl.fillText(form.values.value, cornerWidth / 2, 117);
         gl.save();
-        gl.translate(w - 62, h - 117);
+        gl.translate(w - cornerWidth / 2, h - 117);
         gl.rotate(Math.PI);
         gl.fillText(form.values.value, 0, 0);
         gl.restore();
@@ -407,10 +434,10 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
         // Draw corner value description
         if (form.values.valueDescription) {
             gl.fillStyle = borderTextSmallColor;
-            gl.font = form.values.valueDescription.length > 10 ? "20px Bangers" : "30px Bangers";
-            gl.fillText(form.values.valueDescription, 62, 160);
+            gl.font = form.values.value.length === 1 && form.values.valueDescription.length > 10 ? "20px Bangers" : "30px Bangers";
+            gl.fillText(form.values.valueDescription, cornerWidth / 2, 160);
             gl.save();
-            gl.translate(w - 62, h - 160);
+            gl.translate(w - cornerWidth / 2, h - 160);
             gl.rotate(Math.PI);
             gl.fillText(form.values.valueDescription, 0, 0);
             gl.restore();
@@ -469,11 +496,21 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
                 <label htmlFor="">Text font</label>
                 <Field placeholder="45px Source Sans Pro" type="text" form={form} name="textFont" />
                 <label htmlFor="">Text color</label>
-                <Field type="color" form={form} name="textColor" />
+                <div>
+                    <Field type="color" form={form} name="textColor" />
+                    <button onClick={() => form.setValue("textColor", undefined)}>Reset</button>
+                </div>
                 <label htmlFor="">Border color</label>
-                <Field type="color" form={form} name="borderColor" />
+                <div>
+                    <Field type="color" form={form} name="borderColor" />
+                    <button onClick={() => form.setValue("borderColor", undefined)}>Reset</button>
+                    <button onClick={() => form.setValue("borderColor", "rainbow")}>Rainbow</button>
+                </div>
                 <label htmlFor="">Border text color</label>
-                <Field type="color" form={form} name="borderTextColor" />
+                <div>
+                    <Field type="color" form={form} name="borderTextColor" />
+                    <button onClick={() => form.setValue("borderTextColor", undefined)}>Reset</button>
+                </div>
                 <label htmlFor="">Description</label>
                 <Field as="textarea" form={form} name="description" />
                 <label htmlFor="">No transition</label>
