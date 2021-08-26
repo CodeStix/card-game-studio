@@ -92,7 +92,7 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
             <div className="bg-white border-b px-4 py-2 font-bold text-blue-500">CARD GAME STUDIO</div>
             <div className="grid grid-cols-3 bg-gray-100 flex-grow">
                 <div className="p-4">
-                    <h2 className="text-xl font-bold">{images.length} foto's</h2>
+                    <h2 className="text-xl font-bold">{images.length} images</h2>
                     <input
                         multiple
                         className="my-2"
@@ -120,7 +120,7 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                     <div className="grid gap-1" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))" }}>
                         {images.map((file) => (
                             <div key={file.name} className="border bg-white rounded-md overflow-hidden flex flex-col">
-                                <h2 className="text-sm font-mono px-2 pt-2">
+                                <h2 className="text-sm font-mono px-2 pt-2 flex flex-col">
                                     <input
                                         defaultValue={file.name}
                                         onBlur={async (ev) => {
@@ -132,7 +132,12 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                                         }}
                                     />
                                 </h2>
-                                <input readOnly className="font-mono text-xs px-2 pb-2" value={file.id} />
+                                <input
+                                    readOnly
+                                    className="font-mono text-xs px-2 pb-2"
+                                    onClick={(ev) => (ev.target as HTMLInputElement).select()}
+                                    value={file.id}
+                                />
                                 <img className="h-32 px-2" src={imageFileToDataUrl(file)} />
                                 <button
                                     className="text-red-600 mt-auto"
@@ -149,7 +154,7 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                 <div className="border-l">
                     <div className="p-4">
                         <div className="flex mb-2">
-                            <h2 className="text-xl font-bold">{cards.length} kaarten</h2>
+                            <h2 className="text-xl font-bold">{cards.length} cards</h2>
                             <button
                                 className="px-2 py-1 bg-blue-600 text-white ml-auto"
                                 onClick={async () => {
@@ -191,10 +196,10 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                 <div className="border-l">
                     {card && (
                         <div className="flex-shrink-0 p-4">
-                            <div className="flex">
-                                <h2 className="text-xl font-bold mb-4">Kaart aanpassen</h2>
+                            <div className="flex items-center mb-4">
+                                <h2 className="text-xl font-bold">Edit card</h2>
                                 <button
-                                    className="px-4 py-2 text-red-600 ml-auto"
+                                    className="text-red-600 ml-auto"
                                     onClick={async () => {
                                         await database.delete("card", card.id);
                                         setCard(undefined);
@@ -410,37 +415,37 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
                 });
             })}>
             <div className="grid gap-2" style={{ gridTemplateColumns: "200px 1fr" }}>
-                <label htmlFor="">Waarde</label>
+                <label htmlFor="">Value</label>
                 <Field form={form} name="value" placeholder="3" />
-                <label htmlFor="">Waarde beschrijving</label>
+                <label htmlFor="">Value description</label>
                 <Field form={form} name="valueDescription" placeholder="brie" />
-                <label htmlFor="">Tekst</label>
+                <label htmlFor="">Text</label>
                 <Field as="textarea" form={form} name="text" />
-                <label htmlFor="">Tekst font</label>
+                <label htmlFor="">Text font</label>
                 <Field placeholder="45px Source Sans Pro" type="text" form={form} name="textFont" />
-                <label htmlFor="">Tekst kleur</label>
+                <label htmlFor="">Text color</label>
                 <Field type="color" form={form} name="textColor" />
-                <label htmlFor="">Kader kleur</label>
+                <label htmlFor="">Border color</label>
                 <Field type="color" form={form} name="borderColor" />
-                <label htmlFor="">Kader tekst kleur</label>
+                <label htmlFor="">Border text color</label>
                 <Field type="color" form={form} name="borderTextColor" />
-                <label htmlFor="">Beschrijving</label>
+                <label htmlFor="">Description</label>
                 <Field as="textarea" form={form} name="description" />
-                <label htmlFor="">Geen overgang</label>
+                <label htmlFor="">No transition</label>
                 <Field form={form} type="checkbox" name="noGradient" />
-                <label htmlFor="">Foto id</label>
+                <label htmlFor="">Image id</label>
                 <Field form={form} name="imageId" />
-                <label htmlFor="">Foto x</label>
+                <label htmlFor="">Image x</label>
                 <Field min={-800} max={800} type="range" form={form} name="imageX" />
-                <label htmlFor="">Foto y</label>
+                <label htmlFor="">Image y</label>
                 <Field min={-800} max={800} type="range" form={form} name="imageY" />
-                <label htmlFor="">Foto w</label>
+                <label htmlFor="">Image w</label>
                 <Field min={200} max={1600} type="range" form={form} name="imageWidth" />
-                <label htmlFor="">Foto h</label>
+                <label htmlFor="">Image h</label>
                 <Field min={200} max={2400} type="range" form={form} name="imageHeight" />
 
                 <button type="submit" className="bg-blue-600 text-white">
-                    Opslaan
+                    Save
                 </button>
             </div>
             <canvas ref={canvasRef} className="border border-black my-4" width="800px" height="1200px" />
