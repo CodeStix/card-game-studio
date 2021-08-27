@@ -95,7 +95,31 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
             <div className="bg-white border-b px-4 py-2 font-bold text-blue-500">CARD GAME STUDIO</div>
             <div className="grid grid-cols-3 bg-gray-100 flex-grow">
                 <div className="p-4">
-                    <h2 className="text-xl font-bold">{images.length} images</h2>
+                    <div className="flex items-center">
+                        <h2 className="text-xl font-bold">{images.length} images</h2>
+                        <button
+                            className="bg-blue-600 px-4 py-1 text-white mr-1"
+                            onClick={async () => {
+                                let zip = new JSZip();
+                                let allImages = (await database.getAll("image")) as ImageFile[];
+                                for (let i = 0; i < allImages.length; i++) {
+                                    let image = allImages[i];
+
+                                    processLabelRef.current!.innerText = `Creating zip file ${i + 1}/${allImages.length}`;
+                                    zip.file(image.id + ".png", image.base64, { base64: true });
+                                }
+
+                                let result = await zip.generateAsync({ type: "blob" }, (data) => {
+                                    processLabelRef.current!.innerText = `Exporting... ${data.currentFile} (${Math.round(data.percent)}%)`;
+                                });
+
+                                processLabelRef.current!.innerText = "Done, download will start soon...";
+                                setTimeout(() => (processLabelRef.current!.innerText = ""), 5000);
+                                saveAs(result, "images.zip");
+                            }}>
+                            Export as zip
+                        </button>
+                    </div>
                     <input
                         multiple
                         className="my-2"
@@ -346,12 +370,12 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
             }
         }
 
-        let cornerWidth = 80 + form.values.value.length * 60;
+        let cornerWidth = 80 + form.values.value.length * 50;
 
         if (form.values.description) {
             let lines = form.values.description.split("\n");
 
-            gl.fillStyle = "#aaaaaa";
+            gl.fillStyle = "#dddddd";
             gl.textAlign = "left";
             gl.font = "bold 25px Besley";
             for (let i = 0; i < lines.length; i++) {
@@ -380,8 +404,8 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
         // Draw border
         gl.strokeStyle = borderColor === "rainbow" ? rainbow : borderColor;
         gl.fillStyle = borderColor === "rainbow" ? rainbow : borderColor;
-        gl.lineWidth = 30;
-        const AMOUNT = 30;
+        gl.lineWidth = 50;
+        const AMOUNT = 50;
         const ROUNDING = 40;
         gl.beginPath();
         gl.moveTo(0, 0);
@@ -530,7 +554,7 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
                     Save
                 </button>
             </div>
-            <canvas ref={canvasRef} className="border border-black my-4" width="800px" height="1200px" />
+            <canvas ref={canvasRef} className="border border-black my-4" width="732px" height="1039px" />
         </form>
     );
 }
