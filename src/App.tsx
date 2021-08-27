@@ -19,6 +19,7 @@ interface Card {
     imageWidth?: number;
     imageX?: number;
     imageY?: number;
+    imageFilter?: string;
     value: string;
     valueDescription: string;
     text: string;
@@ -26,6 +27,7 @@ interface Card {
     textColor?: string;
     borderColor?: string;
     borderTextColor?: string;
+    borderSmallTextColor?: string;
     noGradient: boolean;
     description: string;
     base64?: string;
@@ -203,7 +205,7 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                                             }
                                         }
 
-                                        zip.file(i + ".json", JSON.stringify(card));
+                                        zip.file(i + ".json", JSON.stringify({ ...card, base64: undefined }));
                                     }
 
                                     let result = await zip.generateAsync({ type: "blob" }, (data) => {
@@ -326,10 +328,11 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
 
         let borderColor = form.values.borderColor || "white";
         let borderTextColor = form.values.borderTextColor || "#555555";
-        let borderTextSmallColor = "#aaaaaa";
+        let borderTextSmallColor = form.values.borderSmallTextColor || "#999999";
         let textColor = form.values.textColor || "white";
 
         // Draw background
+        gl.filter = form.values.imageFilter || "none";
         if (imageRef.current) {
             gl.drawImage(
                 imageRef.current,
@@ -339,18 +342,19 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
                 form.values.imageHeight ?? h
             );
         }
+        gl.filter = "none";
 
         // Draw gradients
         if (!form.values.noGradient) {
             let bottomGradient = gl.createLinearGradient(0, 0, 0, h);
-            bottomGradient.addColorStop(0.5, "#00000000");
-            bottomGradient.addColorStop(1, "#00000099");
+            bottomGradient.addColorStop(0.65, "#00000000");
+            bottomGradient.addColorStop(1, "#00000066");
             gl.fillStyle = bottomGradient;
             gl.fillRect(0, 0, w, h);
 
             let topGradient = gl.createLinearGradient(0, 0, 0, h);
-            topGradient.addColorStop(0, "#00000099");
-            topGradient.addColorStop(0.5, "#00000000");
+            topGradient.addColorStop(0, "#00000066");
+            topGradient.addColorStop(0.35, "#00000000");
             gl.fillStyle = topGradient;
             gl.fillRect(0, 0, w, h);
         }
@@ -377,7 +381,7 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
 
             gl.fillStyle = "#dddddd";
             gl.textAlign = "left";
-            gl.font = "bold 25px Besley";
+            gl.font = "bold 18px Besley";
             for (let i = 0; i < lines.length; i++) {
                 gl.fillText(lines[i].toUpperCase(), cornerWidth + 35, 70 + i * 27);
             }
@@ -458,7 +462,7 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
         // Draw corner value description
         if (form.values.valueDescription) {
             gl.fillStyle = borderTextSmallColor;
-            gl.font = form.values.value.length === 1 && form.values.valueDescription.length > 10 ? "20px Bangers" : "30px Bangers";
+            gl.font = form.values.value.length === 1 && form.values.valueDescription.length > 10 ? "18px Bangers" : "30px Bangers";
             gl.fillText(form.values.valueDescription, cornerWidth / 2, 160);
             gl.save();
             gl.translate(w - cornerWidth / 2, h - 160);
@@ -535,12 +539,26 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
                     <Field type="color" form={form} name="borderTextColor" />
                     <button onClick={() => form.setValue("borderTextColor", undefined)}>Reset</button>
                 </div>
+                <label htmlFor="">Border small text color</label>
+                <div>
+                    <Field type="color" form={form} name="borderSmallTextColor" />
+                    <button onClick={() => form.setValue("borderSmallTextColor", undefined)}>Reset</button>
+                </div>
                 <label htmlFor="">Description</label>
                 <Field as="textarea" form={form} name="description" />
                 <label htmlFor="">No transition</label>
                 <Field form={form} type="checkbox" name="noGradient" />
                 <label htmlFor="">Image id</label>
                 <Field form={form} name="imageId" />
+                <label htmlFor="">
+                    <a
+                        className="text-blue-500 underline"
+                        target="_blank"
+                        href="https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/filter">
+                        Image filter
+                    </a>
+                </label>
+                <Field form={form} name="imageFilter" />
                 <label htmlFor="">Image x</label>
                 <Field min={-800} max={800} type="range" form={form} name="imageX" />
                 <label htmlFor="">Image y</label>
