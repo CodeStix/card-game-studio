@@ -310,6 +310,153 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
     );
 }
 
+function renderCanvas(canvas: HTMLCanvasElement, card: Card, convertedImage?: HTMLImageElement) {
+    let w = canvas.width,
+        h = canvas.height;
+    let gl = canvas.getContext("2d")!;
+    gl.fillStyle = "white";
+    gl.fillRect(0, 0, w, h);
+
+    let borderColor = card.borderColor || "white";
+    let borderTextColor = card.borderTextColor || "#555555";
+    let borderTextSmallColor = card.borderSmallTextColor || "#999999";
+    let textColor = card.textColor || "white";
+
+    // Draw background
+    gl.filter = card.imageFilter || "none";
+    if (convertedImage) {
+        gl.drawImage(convertedImage, card.imageX ?? 0, card.imageY ?? 0, card.imageWidth ?? w, card.imageHeight ?? h);
+    }
+    gl.filter = "none";
+
+    // Draw gradients
+    if (!card.noGradient) {
+        let bottomGradient = gl.createLinearGradient(0, 0, 0, h);
+        bottomGradient.addColorStop(0.65, "#00000000");
+        bottomGradient.addColorStop(1, "#00000066");
+        gl.fillStyle = bottomGradient;
+        gl.fillRect(0, 0, w, h);
+
+        let topGradient = gl.createLinearGradient(0, 0, 0, h);
+        topGradient.addColorStop(0, "#00000066");
+        topGradient.addColorStop(0.35, "#00000000");
+        gl.fillStyle = topGradient;
+        gl.fillRect(0, 0, w, h);
+    }
+
+    // Draw main text
+    if (card.text) {
+        let lines = card.text.split("\n");
+
+        gl.fillStyle = "#000000aa";
+        gl.fillRect(0, h * 0.7 - 34, w, lines.length * 42 + 14);
+
+        gl.textAlign = "center";
+        gl.font = card.textFont || "34px Besley";
+        gl.fillStyle = textColor;
+        for (let i = 0; i < lines.length; i++) {
+            gl.fillText(lines[i], w / 2, h * 0.7 + 5 + i * 42);
+        }
+    }
+
+    let cornerWidth = 80 + card.value.length * 50;
+
+    if (card.description) {
+        let lines = card.description.split("\n");
+
+        gl.fillStyle = "#dddddd";
+        gl.textAlign = "left";
+        gl.font = "bold 18px Besley";
+        for (let i = 0; i < lines.length; i++) {
+            gl.fillText(lines[i].toUpperCase(), cornerWidth + 35, 70 + i * 27);
+        }
+
+        gl.save();
+        gl.translate(w, h);
+        gl.rotate(Math.PI);
+        for (let i = 0; i < lines.length; i++) {
+            gl.fillText(lines[i].toUpperCase(), cornerWidth + 35, 70 + i * 27);
+        }
+
+        gl.restore();
+    }
+
+    let rainbow = gl.createLinearGradient(0, 0, 0, h);
+    rainbow.addColorStop(0, "#ff3333");
+    rainbow.addColorStop(1 / 6, "#eeee00");
+    rainbow.addColorStop(2 / 6, "#11ee11");
+    rainbow.addColorStop(3 / 6, "#11eeee");
+    rainbow.addColorStop(4 / 6, "#0055ff");
+    rainbow.addColorStop(5 / 6, "#ff55ff");
+    rainbow.addColorStop(6 / 6, "#ff3333");
+
+    // Draw border
+    gl.strokeStyle = borderColor === "rainbow" ? rainbow : borderColor;
+    gl.fillStyle = borderColor === "rainbow" ? rainbow : borderColor;
+    gl.lineWidth = 50;
+    const AMOUNT = 50;
+    const ROUNDING = 40;
+    gl.beginPath();
+    gl.moveTo(0, 0);
+    gl.lineTo(w, 0);
+    gl.lineTo(w - AMOUNT, 0);
+    gl.arcTo(w, 0, w, AMOUNT, ROUNDING);
+    gl.lineTo(w, h);
+    gl.lineTo(w, h - AMOUNT);
+    gl.arcTo(w, h, w - AMOUNT, h, ROUNDING);
+    gl.lineTo(0, h);
+    gl.lineTo(AMOUNT, h);
+    gl.arcTo(0, h, 0, h - AMOUNT, ROUNDING);
+    gl.lineTo(0, 0);
+    gl.lineTo(0, AMOUNT);
+    gl.arcTo(0, 0, AMOUNT, 0, ROUNDING);
+    gl.stroke();
+
+    // Draw border corners
+    const CORNER_RADIUS = 5;
+    const TOP_CORNER_W = cornerWidth,
+        TOP_CORNER_H = 180;
+    gl.beginPath();
+    gl.moveTo(0, 0);
+    gl.lineTo(TOP_CORNER_W, 0);
+    gl.lineTo(TOP_CORNER_W, TOP_CORNER_H - CORNER_RADIUS);
+    gl.arcTo(TOP_CORNER_W, TOP_CORNER_H, TOP_CORNER_W - CORNER_RADIUS, TOP_CORNER_H, 20);
+    gl.lineTo(0, TOP_CORNER_H);
+    gl.fill();
+    const BOTTOM_CORNER_W = cornerWidth,
+        BOTTOM_CORNER_H = 180;
+    gl.beginPath();
+    gl.moveTo(w, h);
+    gl.lineTo(w - BOTTOM_CORNER_W, h);
+    gl.lineTo(w - BOTTOM_CORNER_W, h - BOTTOM_CORNER_H + CORNER_RADIUS);
+    gl.arcTo(w - BOTTOM_CORNER_W, h - BOTTOM_CORNER_H, w - BOTTOM_CORNER_W + CORNER_RADIUS, h - BOTTOM_CORNER_H, 20);
+    gl.lineTo(w, h - BOTTOM_CORNER_H);
+    gl.fill();
+
+    // Draw corner value
+    gl.textAlign = "center";
+    gl.fillStyle = borderTextColor;
+    gl.font = "120px Bangers";
+    gl.fillText(card.value, cornerWidth / 2, 117);
+    gl.save();
+    gl.translate(w - cornerWidth / 2, h - 117);
+    gl.rotate(Math.PI);
+    gl.fillText(card.value, 0, 0);
+    gl.restore();
+
+    // Draw corner value description
+    if (card.valueDescription) {
+        gl.fillStyle = borderTextSmallColor;
+        gl.font = card.value.length === 1 && card.valueDescription.length > 10 ? "18px Bangers" : "30px Bangers";
+        gl.fillText(card.valueDescription, cornerWidth / 2, 160);
+        gl.save();
+        gl.translate(w - cornerWidth / 2, h - 160);
+        gl.rotate(Math.PI);
+        gl.fillText(card.valueDescription, 0, 0);
+        gl.restore();
+    }
+}
+
 function CardForm(props: { card: Card; onChange: (card: Card) => void; database: idb.IDBPDatabase }) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const imageRef = useRef<HTMLImageElement>();
@@ -320,163 +467,7 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
     }, [props.card]);
 
     async function updateCanvas() {
-        let w = canvasRef.current!.width,
-            h = canvasRef.current!.height;
-        let gl = canvasRef.current!.getContext("2d")!;
-        gl.fillStyle = "white";
-        gl.fillRect(0, 0, w, h);
-
-        let borderColor = form.values.borderColor || "white";
-        let borderTextColor = form.values.borderTextColor || "#555555";
-        let borderTextSmallColor = form.values.borderSmallTextColor || "#999999";
-        let textColor = form.values.textColor || "white";
-
-        // Draw background
-        gl.filter = form.values.imageFilter || "none";
-        if (imageRef.current) {
-            gl.drawImage(
-                imageRef.current,
-                form.values.imageX ?? 0,
-                form.values.imageY ?? 0,
-                form.values.imageWidth ?? w,
-                form.values.imageHeight ?? h
-            );
-        }
-        gl.filter = "none";
-
-        // Draw gradients
-        if (!form.values.noGradient) {
-            let bottomGradient = gl.createLinearGradient(0, 0, 0, h);
-            bottomGradient.addColorStop(0.65, "#00000000");
-            bottomGradient.addColorStop(1, "#00000066");
-            gl.fillStyle = bottomGradient;
-            gl.fillRect(0, 0, w, h);
-
-            let topGradient = gl.createLinearGradient(0, 0, 0, h);
-            topGradient.addColorStop(0, "#00000066");
-            topGradient.addColorStop(0.35, "#00000000");
-            gl.fillStyle = topGradient;
-            gl.fillRect(0, 0, w, h);
-        }
-
-        // Draw main text
-        if (form.values.text) {
-            let lines = form.values.text.split("\n");
-
-            gl.fillStyle = "#000000aa";
-            gl.fillRect(0, h * 0.7 - 43, w, lines.length * 55 + 10);
-
-            gl.textAlign = "center";
-            gl.font = form.values.textFont || "40px Besley";
-            gl.fillStyle = textColor;
-            for (let i = 0; i < lines.length; i++) {
-                gl.fillText(lines[i], w / 2, h * 0.7 + 5 + i * 55);
-            }
-        }
-
-        let cornerWidth = 80 + form.values.value.length * 50;
-
-        if (form.values.description) {
-            let lines = form.values.description.split("\n");
-
-            gl.fillStyle = "#dddddd";
-            gl.textAlign = "left";
-            gl.font = "bold 18px Besley";
-            for (let i = 0; i < lines.length; i++) {
-                gl.fillText(lines[i].toUpperCase(), cornerWidth + 35, 70 + i * 27);
-            }
-
-            gl.save();
-            gl.translate(w, h);
-            gl.rotate(Math.PI);
-            for (let i = 0; i < lines.length; i++) {
-                gl.fillText(lines[i].toUpperCase(), cornerWidth + 35, 70 + i * 27);
-            }
-
-            gl.restore();
-        }
-
-        let rainbow = gl.createLinearGradient(0, 0, 0, h);
-        rainbow.addColorStop(0, "#ff3333");
-        rainbow.addColorStop(1 / 6, "#eeee00");
-        rainbow.addColorStop(2 / 6, "#11ee11");
-        rainbow.addColorStop(3 / 6, "#11eeee");
-        rainbow.addColorStop(4 / 6, "#0055ff");
-        rainbow.addColorStop(5 / 6, "#ff55ff");
-        rainbow.addColorStop(6 / 6, "#ff3333");
-
-        // Draw border
-        gl.strokeStyle = borderColor === "rainbow" ? rainbow : borderColor;
-        gl.fillStyle = borderColor === "rainbow" ? rainbow : borderColor;
-        gl.lineWidth = 50;
-        const AMOUNT = 50;
-        const ROUNDING = 40;
-        gl.beginPath();
-        gl.moveTo(0, 0);
-        gl.lineTo(w, 0);
-        gl.lineTo(w - AMOUNT, 0);
-        gl.arcTo(w, 0, w, AMOUNT, ROUNDING);
-        gl.lineTo(w, h);
-        gl.lineTo(w, h - AMOUNT);
-        gl.arcTo(w, h, w - AMOUNT, h, ROUNDING);
-        gl.lineTo(0, h);
-        gl.lineTo(AMOUNT, h);
-        gl.arcTo(0, h, 0, h - AMOUNT, ROUNDING);
-        gl.lineTo(0, 0);
-        gl.lineTo(0, AMOUNT);
-        gl.arcTo(0, 0, AMOUNT, 0, ROUNDING);
-        gl.stroke();
-
-        // Draw border corners
-        const CORNER_RADIUS = 5;
-        const TOP_CORNER_W = cornerWidth,
-            TOP_CORNER_H = 180;
-        gl.beginPath();
-        gl.moveTo(0, 0);
-        gl.lineTo(TOP_CORNER_W, 0);
-        gl.lineTo(TOP_CORNER_W, TOP_CORNER_H - CORNER_RADIUS);
-        gl.arcTo(TOP_CORNER_W, TOP_CORNER_H, TOP_CORNER_W - CORNER_RADIUS, TOP_CORNER_H, 20);
-        gl.lineTo(0, TOP_CORNER_H);
-        gl.fill();
-        const BOTTOM_CORNER_W = cornerWidth,
-            BOTTOM_CORNER_H = 180;
-        gl.beginPath();
-        gl.moveTo(w, h);
-        gl.lineTo(w - BOTTOM_CORNER_W, h);
-        gl.lineTo(w - BOTTOM_CORNER_W, h - BOTTOM_CORNER_H + CORNER_RADIUS);
-        gl.arcTo(w - BOTTOM_CORNER_W, h - BOTTOM_CORNER_H, w - BOTTOM_CORNER_W + CORNER_RADIUS, h - BOTTOM_CORNER_H, 20);
-        gl.lineTo(w, h - BOTTOM_CORNER_H);
-        gl.fill();
-
-        // Draw corner value
-        gl.textAlign = "center";
-        gl.fillStyle = borderTextColor;
-        gl.font = "120px Bangers";
-        gl.fillText(form.values.value, cornerWidth / 2, 117);
-        gl.save();
-        gl.translate(w - cornerWidth / 2, h - 117);
-        gl.rotate(Math.PI);
-        gl.fillText(form.values.value, 0, 0);
-        gl.restore();
-
-        // Draw corner value description
-        if (form.values.valueDescription) {
-            gl.fillStyle = borderTextSmallColor;
-            gl.font = form.values.value.length === 1 && form.values.valueDescription.length > 10 ? "18px Bangers" : "30px Bangers";
-            gl.fillText(form.values.valueDescription, cornerWidth / 2, 160);
-            gl.save();
-            gl.translate(w - cornerWidth / 2, h - 160);
-            gl.rotate(Math.PI);
-            gl.fillText(form.values.valueDescription, 0, 0);
-            gl.restore();
-        }
-
-        // gl.lineWidth = 50;
-        // gl.strokeStyle = "yellow";
-        // gl.strokeRect(0, 0, w, h);
-
-        // gl.fillStyle = "white";
-        // gl.fillRect(100, h / 2, w - 200, h / 2 - 100);
+        renderCanvas(canvasRef.current!, form.values, imageRef.current);
     }
 
     useEffect(() => {
