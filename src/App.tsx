@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import * as idb from "idb";
 import { Field, useForm } from "typed-react-form";
@@ -13,6 +13,7 @@ interface ImageFile {
 }
 
 interface Card {
+    amount?: number;
     id: string;
     imageId?: number;
     imageHeight?: number;
@@ -73,6 +74,7 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
     const [card, setCard] = useState<Card>();
     const [images, setImages] = useState<ImageFile[]>([]);
     const [cards, setCards] = useState<Card[]>([]);
+    const cardCount = useMemo(() => cards.reduce((a, e) => (e.amount || 1) + a, 0), [cards]);
     const processLabelRef = useRef<HTMLParagraphElement>(null);
 
     async function refreshImages() {
@@ -83,6 +85,14 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
 
     async function refreshCards() {
         let c = (await database.getAll("card")) as Card[];
+
+        // Temp fix
+        for (let i = 0; i < c.length; i++) {
+            if (c[i].amount) {
+                c[i].amount = parseInt(c[i].amount as any);
+            }
+        }
+
         c.sort((a, b) => a.value.localeCompare(b.value));
         setCards(c);
     }
@@ -184,16 +194,24 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                 <div className="border-l">
                     <div className="p-4">
                         <div className="flex mb-2 items-center">
-                            <h2 className="text-xl font-bold">{cards.length} cards</h2>
+                            <h2 className="text-xl font-bold">{cardCount} cards</h2>
                             <p className="ml-auto mr-1" ref={processLabelRef}></p>
                             <button
                                 className="bg-blue-600 px-4 py-1 text-white mr-1"
                                 onClick={async () => {
                                     let zip = new JSZip();
                                     let allCards = (await database.getAll("card")) as Card[];
-                                    let rerenderCanvas = document.createElement("canvas");
-                                    rerenderCanvas.width = 732;
-                                    rerenderCanvas.height = 1039;
+                                    let exportJson = false;
+                                    let rerender = true;
+
+                                    let rerenderCanvas: null | HTMLCanvasElement;
+                                    if (rerender) {
+                                        rerenderCanvas = document.createElement("canvas");
+                                        rerenderCanvas.width = 732;
+                                        rerenderCanvas.height = 1039;
+                                    } else {
+                                        rerenderCanvas = null;
+                                    }
                                     // let rerenderCanvas = null as HTMLCanvasElement | null;
 
                                     for (let i = 0; i < allCards.length; i++) {
@@ -213,14 +231,19 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
 
                                         if (card.base64) {
                                             let headerIndex = card.base64.indexOf(",");
-                                            if (headerIndex > 0) {
-                                                zip.file(i + ".png", card.base64.substring(headerIndex + 1), { base64: true });
-                                            } else {
-                                                zip.file(i + ".png", card.base64, { base64: true });
+                                            let base64 = headerIndex > 0 ? card.base64.substring(headerIndex + 1) : card.base64;
+                                            for (let n = 0; n < (card.amount || 1); n++) {
+                                                if (n === 0) {
+                                                    zip.file(i + ".png", base64, { base64: true });
+                                                } else {
+                                                    zip.file(i + "-" + n + ".png", base64, { base64: true });
+                                                }
                                             }
                                         }
 
-                                        zip.file(i + ".json", JSON.stringify({ ...card, base64: undefined }));
+                                        if (exportJson) {
+                                            zip.file(i + ".json", JSON.stringify({ ...card, base64: undefined }));
+                                        }
                                     }
 
                                     rerenderCanvas?.remove();
@@ -350,12 +373,12 @@ function renderCanvas(canvas: HTMLCanvasElement, card: Card, convertedImage?: HT
     if (!card.noGradient) {
         let bottomGradient = gl.createLinearGradient(0, 0, 0, h);
         bottomGradient.addColorStop(0.65, "#00000000");
-        bottomGradient.addColorStop(1, "#00000066");
+        bottomGradient.addColorStop(1, "#00000088");
         gl.fillStyle = bottomGradient;
         gl.fillRect(0, 0, w, h);
 
         let topGradient = gl.createLinearGradient(0, 0, 0, h);
-        topGradient.addColorStop(0, "#00000066");
+        topGradient.addColorStop(0, "#00000088");
         topGradient.addColorStop(0.35, "#00000000");
         gl.fillStyle = topGradient;
         gl.fillRect(0, 0, w, h);
@@ -376,7 +399,7 @@ function renderCanvas(canvas: HTMLCanvasElement, card: Card, convertedImage?: HT
         }
     }
 
-    let cornerWidth = 80 + card.value.length * 50;
+    let cornerWidth = 90 + card.value.length * 50;
 
     if (card.description) {
         let lines = card.description.split("\n");
@@ -464,7 +487,14 @@ function renderCanvas(canvas: HTMLCanvasElement, card: Card, convertedImage?: HT
     // Draw corner value description
     if (card.valueDescription) {
         gl.fillStyle = borderTextSmallColor;
-        gl.font = card.value.length === 1 && card.valueDescription.length > 10 ? "18px Bangers" : "30px Bangers";
+        gl.font =
+            card.value.length === 1 && card.valueDescription.length > 10
+                ? "19px Bangers"
+                : card.valueDescription.length > 7
+                ? "24px Bangers"
+                : card.valueDescription.length > 5
+                ? "28px Bangers"
+                : "32px Bangers";
         gl.fillText(card.valueDescription, cornerWidth / 2, 160);
         gl.save();
         gl.translate(w - cornerWidth / 2, h - 160);
@@ -523,6 +553,8 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
                 });
             })}>
             <div className="grid gap-2" style={{ gridTemplateColumns: "200px 1fr" }}>
+                <label htmlFor="">Amount</label>
+                <Field type="number" form={form} name="amount" placeholder="1" />
                 <label htmlFor="">Value</label>
                 <Field form={form} name="value" placeholder="3" />
                 <label htmlFor="">Value description</label>
