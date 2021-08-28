@@ -205,15 +205,20 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
 
                                     for (let i = 0; i < allCards.length; i++) {
                                         let card = allCards[i];
-                                        console.log(`Add card ${i + 1}/${allCards.length}`);
 
                                         if (card.base64) {
-                                            pdf.addImage(card.base64, "png", 0, 0, 732, 1039);
-                                            pdf.addPage();
+                                            processLabelRef.current!.innerText = `Rendering card ${i + 1}/${allCards.length}`;
+
+                                            for (let i = 0; i < (card.amount || 1); i++) {
+                                                pdf.addImage(card.base64, "png", 0, 0, 732, 1039);
+                                                pdf.addPage();
+                                                await new Promise((res) => setTimeout(res, 25));
+                                            }
                                         }
                                     }
 
-                                    console.log("Saving...");
+                                    processLabelRef.current!.innerText = "Done, download will start soon...";
+                                    setTimeout(() => (processLabelRef.current!.innerText = ""), 5000);
 
                                     await pdf.save("export.pdf", { returnPromise: true });
                                 }}>
@@ -235,7 +240,6 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                                     } else {
                                         rerenderCanvas = null;
                                     }
-                                    // let rerenderCanvas = null as HTMLCanvasElement | null;
 
                                     for (let i = 0; i < allCards.length; i++) {
                                         let card = allCards[i];
