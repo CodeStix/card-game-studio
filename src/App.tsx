@@ -366,7 +366,7 @@ function renderCanvas(canvas: HTMLCanvasElement, card: Card, convertedImage?: HT
         let lines = card.text.split("\n");
 
         gl.fillStyle = "#000000aa";
-        gl.fillRect(0, h * 0.7 - 34, w, lines.length * 42 + 14);
+        gl.fillRect(0, h * 0.7 - 36, w, lines.length * 42 + 14);
 
         gl.textAlign = "center";
         gl.font = card.textFont || "34px Besley";
@@ -534,23 +534,33 @@ function CardForm(props: { card: Card; onChange: (card: Card) => void; database:
                 <label htmlFor="">Text color</label>
                 <div>
                     <Field type="color" form={form} name="textColor" />
-                    <button onClick={() => form.setValue("textColor", undefined)}>Reset</button>
+                    <button type="button" onClick={() => form.setValue("textColor", undefined)}>
+                        Reset
+                    </button>
                 </div>
                 <label htmlFor="">Border color</label>
                 <div>
                     <Field type="color" form={form} name="borderColor" />
-                    <button onClick={() => form.setValue("borderColor", undefined)}>Reset</button>
-                    <button onClick={() => form.setValue("borderColor", "rainbow")}>Rainbow</button>
+                    <button type="button" onClick={() => form.setValue("borderColor", undefined)}>
+                        Reset
+                    </button>
+                    <button type="button" onClick={() => form.setValue("borderColor", "rainbow")}>
+                        Rainbow
+                    </button>
                 </div>
                 <label htmlFor="">Border text color</label>
                 <div>
                     <Field type="color" form={form} name="borderTextColor" />
-                    <button onClick={() => form.setValue("borderTextColor", undefined)}>Reset</button>
+                    <button type="button" onClick={() => form.setValue("borderTextColor", undefined)}>
+                        Reset
+                    </button>
                 </div>
                 <label htmlFor="">Border small text color</label>
                 <div>
                     <Field type="color" form={form} name="borderSmallTextColor" />
-                    <button onClick={() => form.setValue("borderSmallTextColor", undefined)}>Reset</button>
+                    <button type="button" onClick={() => form.setValue("borderSmallTextColor", undefined)}>
+                        Reset
+                    </button>
                 </div>
                 <label htmlFor="">Description</label>
                 <Field as="textarea" form={form} name="description" />
