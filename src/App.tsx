@@ -4,6 +4,7 @@ import * as idb from "idb";
 import { Field, useForm } from "typed-react-form";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import JSPDF from "jspdf";
 
 interface ImageFile {
     id: string;
@@ -196,6 +197,28 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                         <div className="flex mb-2 items-center">
                             <h2 className="text-xl font-bold">{cardCount} cards</h2>
                             <p className="ml-auto mr-1" ref={processLabelRef}></p>
+                            <button
+                                className="bg-blue-600 px-4 py-1 text-white mr-1"
+                                onClick={async () => {
+                                    let pdf = new JSPDF({ format: [732, 1039], unit: "px" });
+                                    let allCards = (await database.getAll("card")) as Card[];
+
+                                    for (let i = 0; i < allCards.length; i++) {
+                                        let card = allCards[i];
+                                        console.log(`Add card ${i + 1}/${allCards.length}`);
+
+                                        if (card.base64) {
+                                            pdf.addImage(card.base64, "png", 0, 0, 732, 1039);
+                                            pdf.addPage();
+                                        }
+                                    }
+
+                                    console.log("Saving...");
+
+                                    await pdf.save("export.pdf", { returnPromise: true });
+                                }}>
+                                Export as pdf
+                            </button>
                             <button
                                 className="bg-blue-600 px-4 py-1 text-white mr-1"
                                 onClick={async () => {

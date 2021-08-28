@@ -9,6 +9,7 @@
   "dependencies": {
     "file-saver": "^2.0.5",
     "idb": "^6.1.2",
+    "jspdf": "^2.3.1",
     "jszip": "^3.7.1",
     "nanoid": "^3.1.25",
     "react": "^17.0.0",
