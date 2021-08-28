@@ -191,10 +191,25 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
                                 onClick={async () => {
                                     let zip = new JSZip();
                                     let allCards = (await database.getAll("card")) as Card[];
+                                    let rerenderCanvas = document.createElement("canvas");
+                                    rerenderCanvas.width = 732;
+                                    rerenderCanvas.height = 1039;
+                                    // let rerenderCanvas = null as HTMLCanvasElement | null;
+
                                     for (let i = 0; i < allCards.length; i++) {
                                         let card = allCards[i];
 
-                                        processLabelRef.current!.innerText = `Creating zip file ${i + 1}/${allCards.length}`;
+                                        processLabelRef.current!.innerText = `Rendering card ${i + 1}/${allCards.length}`;
+
+                                        if (rerenderCanvas && card.imageId) {
+                                            let image = (await database.get("image", card.imageId)) as ImageFile;
+                                            renderCanvas(rerenderCanvas, card, await imageFileToImage(image));
+                                            card = {
+                                                ...card,
+                                                base64: rerenderCanvas.toDataURL(),
+                                            };
+                                            await database.put("card", card);
+                                        }
 
                                         if (card.base64) {
                                             let headerIndex = card.base64.indexOf(",");
@@ -207,6 +222,8 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
 
                                         zip.file(i + ".json", JSON.stringify({ ...card, base64: undefined }));
                                     }
+
+                                    rerenderCanvas?.remove();
 
                                     let result = await zip.generateAsync({ type: "blob" }, (data) => {
                                         processLabelRef.current!.innerText = `Exporting... ${data.currentFile} (${Math.round(data.percent)}%)`;
