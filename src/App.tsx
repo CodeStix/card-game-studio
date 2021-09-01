@@ -120,6 +120,14 @@ export function Dashboard({ database }: { database: idb.IDBPDatabase }) {
 
                                     processLabelRef.current!.innerText = `Creating zip file ${i + 1}/${allImages.length}`;
                                     zip.file(image.id + ".png", image.base64, { base64: true });
+                                    zip.file(
+                                        image.id + ".json",
+                                        JSON.stringify({
+                                            ...image,
+                                            id: undefined,
+                                            base64: undefined,
+                                        })
+                                    );
                                 }
 
                                 let result = await zip.generateAsync({ type: "blob" }, (data) => {
